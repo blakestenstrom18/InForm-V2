@@ -1,0 +1,295 @@
+// -------------------------------------
+// Prisma Schema for Inform v2
+// -------------------------------------
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  org_admin
+  reviewer
+  viewer
+}
+
+enum VisibilityMode {
+  REVEAL_AFTER_ME_SUBMIT
+  REVEAL_AFTER_MIN_REVIEWS
+  NEVER
+  AVERAGES_ONLY_UNTIL_LOCK
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  users     Membership[]
+  forms     Form[]
+  tags      Tag[]
+  auditLogs AuditLog[]
+  createdAt DateTime @default(now())
+
+  @@index([slug])
+}
+
+model User {
+  id                String       @id @default(uuid())
+  email             String       @unique
+  passwordHash      String
+  name              String?
+  isSuperAdmin      Boolean      @default(false)
+  emailBounceStatus String?
+  memberships       Membership[]
+  reviews           Review[]
+  auditLogs         AuditLog[]   @relation("AuditActor")
+  sessions          Session[]
+  createdAt         DateTime     @default(now())
+  lastLoginAt       DateTime?
+
+  @@index([email])
+}
+
+model Session {
+  id        String   @id
+  userId    String
+  expiresAt DateTime
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Membership {
+  id     String @id @default(uuid())
+  userId String
+  orgId  String
+  role   Role
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, orgId])
+  @@index([orgId, role])
+}
+
+model Form {
+  id                  String             @id @default(uuid())
+  orgId               String
+  org                 Organization       @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name                String
+  slug                String
+  status              String             @default("draft") // draft | open | closed | archived
+  openAt              DateTime?
+  closeAt             DateTime?
+  minReviewsRequired  Int                @default(1)
+  visibilityMode      VisibilityMode     @default(REVEAL_AFTER_ME_SUBMIT)
+  visibilityThreshold Int?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  versions           FormVersion[]
+  rubricVersions     RubricVersion[]
+  submissions        Submission[]
+  visibilityPolicies VisibilityPolicy[]
+  slugHistory        SlugHistory[]
+
+  @@unique([orgId, slug])
+  @@index([orgId])
+  @@index([status])
+}
+
+model SlugHistory {
+  id        String   @id @default(uuid())
+  formId    String
+  oldSlug   String
+  changedAt DateTime @default(now())
+  form      Form     @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([formId])
+}
+
+model FormVersion {
+  id          String       @id @default(uuid())
+  formId      String
+  form        Form         @relation(fields: [formId], references: [id], onDelete: Cascade)
+  version     Int
+  schemaJson  Json
+  notes       String?
+  publishedAt DateTime?
+  createdAt   DateTime     @default(now())
+  submissions Submission[]
+
+  @@unique([formId, version])
+  @@index([formId, publishedAt])
+}
+
+model RubricVersion {
+  id            String       @id @default(uuid())
+  formId        String
+  form          Form         @relation(fields: [formId], references: [id], onDelete: Cascade)
+  version       Int
+  questionsJson Json
+  scaleMin      Int          @default(1)
+  scaleMax      Int          @default(5)
+  scaleStep     Int          @default(1)
+  weightsJson   Json?
+  publishedAt   DateTime?
+  createdAt     DateTime     @default(now())
+  submissions   Submission[]
+
+  @@unique([formId, version])
+  @@index([formId, publishedAt])
+}
+
+model Submission {
+  id              String      @id @default(uuid())
+  orgId           String
+  formId          String
+  formVersionId   String
+  rubricVersionId String
+  submitterEmail  String
+  submittedAt     DateTime    @default(now())
+  dataJson        Json
+  spamScore       Float       @default(0)
+  status          String      @default("ungraded") // ungraded | partially_graded | fully_graded
+
+  form          Form                 @relation(fields: [formId], references: [id], onDelete: Cascade)
+  formVersion   FormVersion          @relation(fields: [formVersionId], references: [id])
+  rubricVersion RubricVersion        @relation(fields: [rubricVersionId], references: [id])
+  reviews       Review[]
+  attachments   Attachment[]
+  tags          SubmissionTag[]
+  aggregate     SubmissionAggregate?
+
+  @@index([orgId, formId, submittedAt])
+  @@index([submitterEmail])
+  @@index([status])
+}
+
+model Attachment {
+  id           String     @id @default(uuid())
+  submissionId String
+  url          String
+  type         String
+  sizeBytes    Int
+  createdAt    DateTime   @default(now())
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([submissionId])
+}
+
+model Review {
+  id             String           @id @default(uuid())
+  submissionId   String
+  reviewerUserId String
+  submittedAt    DateTime?
+  isSuperseded   Boolean          @default(false)
+  createdAt      DateTime         @default(now())
+
+  submission Submission       @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  reviewer   User             @relation(fields: [reviewerUserId], references: [id], onDelete: Cascade)
+  revisions  ReviewRevision[]
+
+  @@unique([submissionId, reviewerUserId])
+  @@index([submissionId])
+  @@index([reviewerUserId])
+}
+
+model ReviewRevision {
+  id          String   @id @default(uuid())
+  reviewId    String
+  createdAt   DateTime @default(now())
+  scoresJson  Json
+  commentText String?
+
+  review Review @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId, createdAt])
+}
+
+model VisibilityPolicy {
+  id              String         @id @default(uuid())
+  formId          String
+  mode            VisibilityMode
+  revealThreshold Int?
+  form            Form           @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  @@index([formId])
+}
+
+model SubmissionAggregate {
+  submissionId   String     @id
+  reviewsCount   Int        @default(0)
+  compositeScore Float?
+  lastReviewAt   DateTime?
+  updatedAt      DateTime   @updatedAt
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([compositeScore])
+  @@index([reviewsCount])
+}
+
+model Tag {
+  id          String          @id @default(uuid())
+  orgId       String
+  label       String
+  color       String
+  org         Organization    @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  submissions SubmissionTag[]
+
+  @@unique([orgId, label])
+  @@index([orgId])
+}
+
+model SubmissionTag {
+  submissionId String
+  tagId        String
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  tag          Tag        @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([submissionId, tagId])
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  orgId        String
+  actorUserId  String?
+  action       String
+  targetType   String
+  targetId     String?
+  metadataJson Json?
+  createdAt    DateTime @default(now())
+
+  actor User?        @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  org   Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId, createdAt])
+  @@index([action])
+}
+
+model FeatureFlag {
+  id        String  @id @default(uuid())
+  key       String
+  valueJson Json
+  orgId     String?
+  formId    String?
+
+  @@index([key])
+  @@index([orgId])
+}
+
+model DomainEvent {
+  id          String    @id @default(uuid())
+  orgId       String
+  type        String
+  payloadJson Json
+  occurredAt  DateTime  @default(now())
+  processedAt DateTime?
+
+  @@index([orgId, type, occurredAt])
+  @@index([processedAt])
+}
