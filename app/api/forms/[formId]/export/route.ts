@@ -84,7 +84,7 @@ export async function GET(
     ];
 
     // Build CSV rows
-    const rows = submissions.map((submission) => {
+    const rows = submissions.map((submission: any) => {
       const row: any[] = [
         submission.id,
         submission.submittedAt.toISOString(),
@@ -96,16 +96,16 @@ export async function GET(
       // Add average scores for each question
       questions.forEach((question: any) => {
         const questionScores = submission.reviews
-          .map((review) => {
+          .map((review: any) => {
             const scores = review.revisions[0]?.scoresJson as Record<string, number>;
             return scores?.[question.id];
           })
-          .filter((score) => score !== undefined);
+          .filter((score: any) => score !== undefined);
 
         const avgScore =
           questionScores.length > 0
             ? (
-                questionScores.reduce((a, b) => a + b, 0) / questionScores.length
+                questionScores.reduce((a: number, b: number) => a + b, 0) / questionScores.length
               ).toFixed(2)
             : '';
         row.push(avgScore);
