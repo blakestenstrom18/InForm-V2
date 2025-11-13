@@ -48,17 +48,17 @@ export default async function SubmissionDetailPage({
   const membership = await prisma.membership.findUnique({
     where: {
       userId_orgId: {
-        userId: user.id,
+        userId: user!.id,
         orgId: submission.orgId,
       },
     },
   });
 
-  const isAdmin = user.isSuperAdmin || membership?.role === 'org_admin';
+  const isAdmin = user!.isSuperAdmin || membership?.role === 'org_admin';
 
   // Get reviews based on visibility policy
   const { myReview, others, canSeeOthers } = await getVisibleReviews(
-    user,
+    user!,
     params.submissionId
   );
 
@@ -182,7 +182,8 @@ export default async function SubmissionDetailPage({
             <CardContent>
               <div className="space-y-4">
                 {formSchema.fields?.map((field: any) => {
-                  const value = submission.dataJson[field.id];
+                  const dataJson = submission.dataJson as Record<string, any>;
+                  const value = dataJson?.[field.id];
                   return (
                     <div key={field.id}>
                       <p className="text-sm font-medium text-muted-foreground">
@@ -205,14 +206,14 @@ export default async function SubmissionDetailPage({
           <ReviewForm
             submissionId={submission.id}
             rubricVersion={rubricSchema}
-            existingReview={reviews.myReview}
+            existingReview={myReview as any}
           />
 
           {/* Reviews Display */}
           <ReviewDisplay
-            myReview={reviews.myReview}
-            others={reviews.others}
-            canSeeOthers={reviews.canSeeOthers}
+            myReview={myReview as any}
+            others={visibleOthers as any}
+            canSeeOthers={isAdmin || canSeeOthers}
             aggregate={submission.aggregate}
           />
         </div>
@@ -247,4 +248,3 @@ export default async function SubmissionDetailPage({
     </div>
   );
 }
-
