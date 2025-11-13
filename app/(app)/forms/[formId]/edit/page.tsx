@@ -7,12 +7,13 @@ import FormBuilder from '@/components/forms/form-builder';
 export default async function EditFormPage({
   params,
 }: {
-  params: { formId: string };
+  params: Promise<{ formId: string }>;
 }) {
   const { user } = await validateRequest();
+  const { formId } = await params;
   
   const form = await prisma.form.findUnique({
-    where: { id: params.formId },
+    where: { id: formId },
     include: {
       versions: {
         orderBy: { version: 'desc' },

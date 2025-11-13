@@ -234,7 +234,7 @@ export default function SubmissionsListClient({
                       </TableCell>
                       <TableCell>{submission.aggregate?.reviewsCount || 0}</TableCell>
                       <TableCell>
-                        {submission.aggregate?.compositeScore !== null
+                        {submission.aggregate?.compositeScore !== null && submission.aggregate
                           ? submission.aggregate.compositeScore.toFixed(2)
                           : '—'}
                       </TableCell>

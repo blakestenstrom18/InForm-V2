@@ -15,12 +15,13 @@ import ReviewDisplay from '@/components/review/review-display';
 export default async function SubmissionDetailPage({
   params,
 }: {
-  params: { submissionId: string };
+  params: Promise<{ submissionId: string }>;
 }) {
   const { user } = await validateRequest();
+  const { submissionId } = await params;
 
   const submission = await prisma.submission.findUnique({
-    where: { id: params.submissionId },
+    where: { id: submissionId },
     include: {
       form: true,
       formVersion: true,
@@ -59,14 +60,14 @@ export default async function SubmissionDetailPage({
   // Get reviews based on visibility policy
   const { myReview, others, canSeeOthers } = await getVisibleReviews(
     user!,
-    params.submissionId
+    submissionId
   );
 
   // Admins can always see all reviews
   const visibleOthers = isAdmin
     ? await prisma.review.findMany({
         where: {
-          submissionId: params.submissionId,
+          submissionId: submissionId,
           submittedAt: { not: null },
         },
         include: {

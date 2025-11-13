@@ -151,22 +151,24 @@ export default function PublicFormPage() {
           fieldSchema = z.string().url('Invalid URL');
           break;
         case 'number':
-          fieldSchema = z.number();
+          let numberSchema = z.number();
           if (field.validation?.min !== undefined) {
-            fieldSchema = fieldSchema.min(field.validation.min);
+            numberSchema = numberSchema.min(field.validation.min);
           }
           if (field.validation?.max !== undefined) {
-            fieldSchema = fieldSchema.max(field.validation.max);
+            numberSchema = numberSchema.max(field.validation.max);
           }
+          fieldSchema = numberSchema;
           break;
         default:
-          fieldSchema = z.string();
+          let stringSchema = z.string();
           if (field.validation?.pattern) {
-            fieldSchema = fieldSchema.regex(
+            stringSchema = stringSchema.regex(
               new RegExp(field.validation.pattern),
               'Invalid format'
             );
           }
+          fieldSchema = stringSchema;
       }
 
       if (field.required) {
@@ -188,7 +190,7 @@ export default function PublicFormPage() {
     formState: { errors },
     setValue,
     watch,
-  } = useForm<FormValues>({
+  } = useForm<any>({
     resolver: zodResolver(formSchema),
   });
 
@@ -203,7 +205,7 @@ export default function PublicFormPage() {
 
     try {
       // Extract submitterEmail and honeypot, keep rest as data
-      const { submitterEmail, honeypot, ...formFields } = data;
+      const { submitterEmail, honeypot, ...formFields } = data as any;
 
       const response = await fetch(
         `/api/public/forms/${orgSlug}/${formSlug}`,
@@ -312,7 +314,7 @@ export default function PublicFormPage() {
                 />
                 {errors.submitterEmail && (
                   <p className="text-sm text-destructive">
-                    {errors.submitterEmail.message}
+                    {errors.submitterEmail.message as string}
                   </p>
                 )}
               </div>

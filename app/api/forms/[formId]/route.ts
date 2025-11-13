@@ -5,11 +5,12 @@ import { UpdateFormSchema } from '@/lib/zod-schemas';
 
 export async function GET(
   request: Request,
-  { params }: { params: { formId: string } }
+  { params }: { params: Promise<{ formId: string }> }
 ) {
   try {
+    const { formId } = await params;
     const form = await prisma.form.findUnique({
-      where: { id: params.formId },
+      where: { id: formId },
       include: {
         versions: {
           orderBy: { version: 'desc' },
@@ -50,11 +51,12 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { formId: string } }
+  { params }: { params: Promise<{ formId: string }> }
 ) {
   try {
+    const { formId } = await params;
     const form = await prisma.form.findUnique({
-      where: { id: params.formId },
+      where: { id: formId },
     });
 
     if (!form) {
@@ -94,7 +96,7 @@ export async function PATCH(
     }
 
     const updatedForm = await prisma.form.update({
-      where: { id: params.formId },
+      where: { id: formId },
       data: {
         name: data.name,
         slug: data.slug,
@@ -128,11 +130,12 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { formId: string } }
+  { params }: { params: Promise<{ formId: string }> }
 ) {
   try {
+    const { formId } = await params;
     const form = await prisma.form.findUnique({
-      where: { id: params.formId },
+      where: { id: formId },
     });
 
     if (!form) {
@@ -142,7 +145,7 @@ export async function DELETE(
     const { user } = await requireOrgRole(form.orgId, ['org_admin']);
 
     await prisma.form.delete({
-      where: { id: params.formId },
+      where: { id: formId },
     });
 
     return NextResponse.json({ success: true });

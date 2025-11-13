@@ -6,11 +6,12 @@ import { getVisibleReviews } from '@/lib/visibility';
 
 export async function GET(
   request: Request,
-  { params }: { params: { submissionId: string } }
+  { params }: { params: Promise<{ submissionId: string }> }
 ) {
   try {
+    const { submissionId } = await params;
     const submission = await prisma.submission.findUnique({
-      where: { id: params.submissionId },
+      where: { id: submissionId },
       include: {
         form: true,
         aggregate: true,
@@ -33,7 +34,7 @@ export async function GET(
     // Get visible reviews based on policy
     const { myReview, others, canSeeOthers } = await getVisibleReviews(
       user,
-      params.submissionId
+      submissionId
     );
 
     // Org admins can always see all reviews
@@ -69,11 +70,12 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: { submissionId: string } }
+  { params }: { params: Promise<{ submissionId: string }> }
 ) {
   try {
+    const { submissionId } = await params;
     const submission = await prisma.submission.findUnique({
-      where: { id: params.submissionId },
+      where: { id: submissionId },
       include: {
         form: true,
         rubricVersion: true,
@@ -129,7 +131,7 @@ export async function POST(
     let review = await prisma.review.findUnique({
       where: {
         submissionId_reviewerUserId: {
-          submissionId: params.submissionId,
+          submissionId: submissionId,
           reviewerUserId: user.id,
         },
       },
@@ -138,7 +140,7 @@ export async function POST(
     if (!review) {
       review = await prisma.review.create({
         data: {
-          submissionId: params.submissionId,
+          submissionId: submissionId,
           reviewerUserId: user.id,
         },
       });
@@ -163,7 +165,7 @@ export async function POST(
       // Recalculate aggregate (simplified - in production, use worker)
       const submittedReviews = await prisma.review.count({
         where: {
-          submissionId: params.submissionId,
+          submissionId: submissionId,
           submittedAt: { not: null },
         },
       });
@@ -172,7 +174,7 @@ export async function POST(
       const latestRevisions = await prisma.reviewRevision.findMany({
         where: {
           review: {
-            submissionId: params.submissionId,
+            submissionId: submissionId,
             submittedAt: { not: null },
           },
         },
@@ -198,9 +200,9 @@ export async function POST(
 
       // Update aggregate
       await prisma.submissionAggregate.upsert({
-        where: { submissionId: params.submissionId },
+        where: { submissionId: submissionId },
         create: {
-          submissionId: params.submissionId,
+          submissionId: submissionId,
           reviewsCount: submittedReviews,
           compositeScore,
           lastReviewAt: new Date(),
@@ -222,7 +224,7 @@ export async function POST(
       }
 
       await prisma.submission.update({
-        where: { id: params.submissionId },
+        where: { id: submissionId },
         data: { status },
       });
 
@@ -233,7 +235,7 @@ export async function POST(
           type: 'review.submitted',
           payloadJson: {
             reviewId: review.id,
-            submissionId: params.submissionId,
+            submissionId: submissionId,
             timestamp: new Date().toISOString(),
           },
         },

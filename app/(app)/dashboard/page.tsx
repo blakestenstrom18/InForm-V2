@@ -54,7 +54,7 @@ export default async function DashboardPage() {
       <div>
         <h1 className="text-3xl font-bold">Dashboard</h1>
         <p className="text-muted-foreground">
-          Welcome back, {user.name || user.email}
+          Welcome back, {user?.name || user?.email || 'User'}
         </p>
       </div>
 

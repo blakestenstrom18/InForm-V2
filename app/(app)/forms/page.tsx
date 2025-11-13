@@ -104,7 +104,7 @@ export default async function FormsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {forms.map((form) => (
+                {forms.map((form: any) => (
                   <TableRow key={form.id}>
                     <TableCell className="font-medium">{form.name}</TableCell>
                     <TableCell>{form.org.name}</TableCell>

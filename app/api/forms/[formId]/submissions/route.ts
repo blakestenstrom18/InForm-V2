@@ -5,11 +5,12 @@ import { SubmissionFilterSchema } from '@/lib/zod-schemas';
 
 export async function GET(
   request: Request,
-  { params }: { params: { formId: string } }
+  { params }: { params: Promise<{ formId: string }> }
 ) {
   try {
+    const { formId } = await params;
     const form = await prisma.form.findUnique({
-      where: { id: params.formId },
+      where: { id: formId },
     });
 
     if (!form) {
@@ -34,7 +35,7 @@ export async function GET(
     });
 
     const where: any = {
-      formId: params.formId,
+      formId: formId,
     };
 
     if (filters.status) {

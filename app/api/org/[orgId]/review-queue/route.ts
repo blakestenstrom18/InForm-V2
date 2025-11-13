@@ -5,10 +5,11 @@ import { PaginationSchema } from '@/lib/zod-schemas';
 
 export async function GET(
   request: Request,
-  { params }: { params: { orgId: string } }
+  { params }: { params: Promise<{ orgId: string }> }
 ) {
   try {
-    const { user } = await requireOrgRole(params.orgId, [
+    const { orgId } = await params;
+    const { user } = await requireOrgRole(orgId, [
       'org_admin',
       'reviewer',
     ]);
@@ -21,7 +22,7 @@ export async function GET(
 
     // Get submissions user hasn't reviewed yet
     const where: any = {
-      orgId: params.orgId,
+      orgId: orgId,
       form: {
         status: 'open',
       },

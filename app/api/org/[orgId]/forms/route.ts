@@ -5,10 +5,11 @@ import { CreateFormSchema } from '@/lib/zod-schemas';
 
 export async function GET(
   request: Request,
-  { params }: { params: { orgId: string } }
+  { params }: { params: Promise<{ orgId: string }> }
 ) {
   try {
-    const { user } = await requireOrgRole(params.orgId, [
+    const { orgId } = await params;
+    const { user } = await requireOrgRole(orgId, [
       'org_admin',
       'reviewer',
       'viewer',
@@ -16,7 +17,7 @@ export async function GET(
 
     const forms = await prisma.form.findMany({
       where: {
-        orgId: params.orgId,
+        orgId: orgId,
       },
       include: {
         _count: {
@@ -45,16 +46,17 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: { orgId: string } }
+  { params }: { params: Promise<{ orgId: string }> }
 ) {
   try {
-    const { user } = await requireOrgRole(params.orgId, ['org_admin']);
+    const { orgId } = await params;
+    const { user } = await requireOrgRole(orgId, ['org_admin']);
 
     const body = await request.json();
     const data = CreateFormSchema.parse(body);
 
     // Verify orgId matches
-    if (data.orgId !== params.orgId) {
+    if (data.orgId !== orgId) {
       return NextResponse.json(
         { error: 'Organization ID mismatch' },
         { status: 400 }
@@ -65,7 +67,7 @@ export async function POST(
     const existingForm = await prisma.form.findUnique({
       where: {
         orgId_slug: {
-          orgId: params.orgId,
+          orgId: orgId,
           slug: data.slug,
         },
       },
@@ -81,7 +83,7 @@ export async function POST(
     // Create form
     const form = await prisma.form.create({
       data: {
-        orgId: params.orgId,
+        orgId: orgId,
         name: data.name,
         slug: data.slug,
         status: 'draft',

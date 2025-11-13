@@ -37,7 +37,7 @@ export default async function ReviewQueuePage() {
   const orgs = await getUserOrgs();
   const orgIds = orgs.map((org: any) => org.id);
 
-  const queueData = await getReviewQueue(orgIds, user.id);
+  const queueData = await getReviewQueue(orgIds, user?.id || '');
   const submissions = queueData.items || [];
 
   return (

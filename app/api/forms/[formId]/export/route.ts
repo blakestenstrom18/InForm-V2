@@ -5,11 +5,12 @@ import { stringify } from 'csv-stringify/sync';
 
 export async function GET(
   request: Request,
-  { params }: { params: { formId: string } }
+  { params }: { params: Promise<{ formId: string }> }
 ) {
   try {
+    const { formId } = await params;
     const form = await prisma.form.findUnique({
-      where: { id: params.formId },
+      where: { id: formId },
       include: {
         versions: {
           where: { publishedAt: { not: null } },
@@ -36,7 +37,7 @@ export async function GET(
     // Get all submissions for this form
     const submissions = await prisma.submission.findMany({
       where: {
-        formId: params.formId,
+        formId: formId,
       },
       include: {
         aggregate: true,

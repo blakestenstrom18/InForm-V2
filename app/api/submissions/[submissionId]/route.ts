@@ -5,11 +5,12 @@ import { getVisibleReviews } from '@/lib/visibility';
 
 export async function GET(
   request: Request,
-  { params }: { params: { submissionId: string } }
+  { params }: { params: Promise<{ submissionId: string }> }
 ) {
   try {
+    const { submissionId } = await params;
     const submission = await prisma.submission.findUnique({
-      where: { id: params.submissionId },
+      where: { id: submissionId },
       include: {
         form: {
           include: {
@@ -59,14 +60,14 @@ export async function GET(
     // Get reviews based on visibility policy
     const { myReview, others, canSeeOthers } = await getVisibleReviews(
       user,
-      params.submissionId
+      submissionId
     );
 
     // Admins can always see all reviews
     const visibleOthers = isAdmin
       ? await prisma.review.findMany({
           where: {
-            submissionId: params.submissionId,
+            submissionId: submissionId,
             submittedAt: { not: null },
           },
           include: {

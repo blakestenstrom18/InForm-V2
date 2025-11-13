@@ -5,11 +5,12 @@ import { PublishFormSchema, FormSchemaJson, RubricSchemaJson } from '@/lib/zod-s
 
 export async function POST(
   request: Request,
-  { params }: { params: { formId: string } }
+  { params }: { params: Promise<{ formId: string }> }
 ) {
   try {
+    const { formId } = await params;
     const form = await prisma.form.findUnique({
-      where: { id: params.formId },
+      where: { id: formId },
       include: {
         versions: {
           orderBy: { version: 'desc' },

@@ -10,13 +10,14 @@ import {
 
 export async function GET(
   request: Request,
-  { params }: { params: { orgSlug: string; formSlug: string } }
+  { params }: { params: Promise<{ orgSlug: string; formSlug: string }> }
 ) {
   try {
+    const { orgSlug, formSlug } = await params;
     const form = await prisma.form.findFirst({
       where: {
-        slug: params.formSlug,
-        org: { slug: params.orgSlug },
+        slug: formSlug,
+        org: { slug: orgSlug },
         status: 'open',
       },
       include: {
@@ -85,9 +86,10 @@ export async function GET(
 
 export async function POST(
   request: Request,
-  { params }: { params: { orgSlug: string; formSlug: string } }
+  { params }: { params: Promise<{ orgSlug: string; formSlug: string }> }
 ) {
   try {
+    const { orgSlug, formSlug } = await params;
     // Rate limiting
     const clientIP = getClientIP(request);
     const ipLimit = await rateLimitByIP(clientIP, 60 * 1000, 10); // 10 requests per minute
@@ -154,8 +156,8 @@ export async function POST(
     // Get form with published versions
     const form = await prisma.form.findFirst({
       where: {
-        slug: params.formSlug,
-        org: { slug: params.orgSlug },
+        slug: formSlug,
+        org: { slug: orgSlug },
         status: 'open',
       },
       include: {
