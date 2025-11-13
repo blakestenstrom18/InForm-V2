@@ -114,7 +114,7 @@ export async function GET(
           scaleStep: submission.rubricVersion.scaleStep,
         },
         aggregate: submission.aggregate,
-        tags: submission.tags.map((st) => ({
+        tags: submission.tags.map((st: any) => ({
           id: st.tag.id,
           label: st.tag.label,
           color: st.tag.color,
