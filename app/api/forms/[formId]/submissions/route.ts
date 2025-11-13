@@ -80,7 +80,7 @@ export async function GET(
     // Filter by score range
     let filteredSubmissions = submissions;
     if (filters.minScore !== undefined || filters.maxScore !== undefined) {
-      filteredSubmissions = submissions.filter((sub) => {
+      filteredSubmissions = submissions.filter((sub: any) => {
         const score = sub.aggregate?.compositeScore;
         if (score === null || score === undefined) return false;
         if (filters.minScore !== undefined && score < filters.minScore) return false;
